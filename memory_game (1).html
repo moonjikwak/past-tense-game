@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Past Tense Memory Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Chewy&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#0f1b2d;
+  --bg1:#162236;
+  --bg2:#1e3050;
+  --card-back:#2a4a7f;
+  --card-back2:#1e3868;
+  --gold:#ffd166;
+  --gold2:#f4a800;
+  --mint:#06d6a0;
+  --mint2:#04a87e;
+  --coral:#ef476f;
+  --coral2:#c72d52;
+  --sky:#4cc9f0;
+  --sky2:#2196c4;
+  --ink:#e8f0fe;
+  --ink-soft:#8a9bbe;
+  --correct:#06d6a0;
+  --wrong:#ef476f;
+  --shadow:rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:'Nunito',sans-serif;
+  color:var(--ink);
+  background:var(--bg0);
+  user-select:none;-webkit-user-select:none;
+}
+
+/* starfield */
+#stars{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d) ease-in-out infinite var(--delay);}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:.9;transform:scale(1.3)}}
+
+#app{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;
+  max-width:860px;margin:0 auto;padding:12px clamp(10px,3vw,22px) 14px;gap:10px;}
+
+/* ── HEADER ── */
+header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.logo{font-family:'Chewy';font-size:clamp(20px,5vw,28px);color:var(--gold);
+  text-shadow:2px 3px 0 rgba(0,0,0,.5),0 0 20px rgba(255,209,102,.35);letter-spacing:.5px;}
+.hud{display:flex;gap:7px;align-items:center;}
+.chip{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:6px 12px;font-family:'Chewy';font-size:clamp(14px,3.5vw,18px);
+  color:var(--gold);display:flex;align-items:center;gap:5px;letter-spacing:.3px;}
+
+/* ── LEVEL BAR ── */
+.level-bar{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:10px;}
+.lv-node{
+  display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;
+  opacity:.35;transition:opacity .4s;
+}
+.lv-node.done{opacity:1;}
+.lv-node.active{opacity:1;}
+.lv-circle{
+  width:clamp(36px,9vw,46px);height:clamp(36px,9vw,46px);border-radius:50%;
+  display:grid;place-items:center;font-family:'Chewy';font-size:clamp(16px,4vw,20px);
+  background:var(--card-back2);border:2.5px solid rgba(255,255,255,.15);
+  transition:all .4s;position:relative;z-index:2;
+}
+.lv-node.done .lv-circle{background:var(--mint2);border-color:var(--mint);color:#fff;
+  box-shadow:0 0 14px var(--mint);}
+.lv-node.active .lv-circle{background:var(--gold2);border-color:var(--gold);color:#0f1b2d;
+  box-shadow:0 0 18px var(--gold);animation:activePulse 2s ease-in-out infinite;}
+@keyframes activePulse{0%,100%{box-shadow:0 0 14px var(--gold)}50%{box-shadow:0 0 28px var(--gold),0 0 48px rgba(255,209,102,.3)}}
+.lv-label{font-size:clamp(9px,2.2vw,11px);font-weight:800;color:var(--ink-soft);text-transform:uppercase;
+  letter-spacing:.5px;text-align:center;}
+.lv-line{flex:1;height:2px;background:rgba(255,255,255,.1);max-width:60px;
+  position:relative;top:-12px;}
+.lv-node.done+.lv-line{background:var(--mint2);}
+
+/* ── BOARD ── */
+.board-wrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+.board{
+  display:grid;gap:clamp(6px,1.8vw,10px);
+  width:100%;align-content:center;
+}
+/* grid cols set by JS */
+
+/* ── CARD ── */
+.card{
+  perspective:600px;cursor:pointer;
+  aspect-ratio:1/.72;
+}
+.card-inner{
+  position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transition:transform .45s cubic-bezier(.4,0,.2,1);
+}
+.card.flipped .card-inner{transform:rotateY(180deg);}
+.card-front,.card-back{
+  position:absolute;inset:0;border-radius:clamp(10px,2.5vw,16px);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 18px var(--shadow);
+}
+/* BACK (question side) */
+.card-back{
+  background:linear-gradient(145deg,var(--card-back),var(--card-back2));
+  border:2px solid rgba(100,140,220,.2);font-size:clamp(22px,6vw,32px);
+  flex-direction:column;gap:4px;
+}
+.card-back::after{content:"?";font-family:'Chewy';font-size:clamp(28px,7vw,40px);
+  color:rgba(255,255,255,.18);}
+/* FRONT (content side) */
+.card-front{
+  background:linear-gradient(145deg,#1e3a68,#162d52);
+  border:2px solid rgba(100,160,255,.2);
+  transform:rotateY(180deg);
+  padding:8px;
+  flex-direction:column;gap:4px;text-align:center;
+}
+.card-front .c-emoji{font-size:clamp(22px,6vw,34px);line-height:1;}
+.card-front .c-text{
+  font-size:clamp(11px,2.8vw,15px);font-weight:800;color:var(--ink);
+  line-height:1.2;word-break:break-word;
+}
+.card-front .c-sub{font-size:clamp(9px,2.2vw,12px);font-weight:700;color:var(--ink-soft);}
+
+/* matched state */
+.card.matched .card-front{
+  background:linear-gradient(145deg,#0d3d2a,#0a5038);
+  border-color:var(--mint);box-shadow:0 0 16px rgba(6,214,160,.35);
+}
+.card.matched .c-text{color:var(--mint);}
+
+/* wrong flash */
+.card.wrong-flash .card-front{animation:wrongFlash .5s ease;}
+@keyframes wrongFlash{0%,100%{border-color:rgba(100,160,255,.2)}40%{border-color:var(--coral);box-shadow:0 0 18px rgba(239,71,111,.5);}}
+
+/* ── TIMER BAR ── */
+.timer-wrap{flex:0 0 auto;}
+.timer-rail{height:8px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;}
+.timer-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mint),var(--sky));
+  transition:width .5s linear,background .5s;}
+.timer-bar.warn{background:linear-gradient(90deg,var(--gold),var(--coral));}
+.timer-info{display:flex;justify-content:space-between;margin-top:4px;
+  font-size:12px;font-weight:800;color:var(--ink-soft);}
+
+/* ── OVERLAY ── */
+.overlay{
+  position:fixed;inset:0;z-index:50;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(10,18,30,.88);backdrop-filter:blur(8px);
+  flex-direction:column;gap:16px;padding:24px;text-align:center;
+}
+.overlay.show{display:flex;}
+.ov-box{
+  background:linear-gradient(160deg,var(--bg2),var(--bg1));
+  border:2px solid rgba(255,255,255,.1);border-radius:28px;
+  padding:clamp(20px,5vw,32px) clamp(20px,5vw,40px);
+  box-shadow:0 24px 60px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  max-width:420px;width:100%;
+}
+.ov-emoji{font-size:clamp(52px,13vw,76px);animation:ovBob 2s ease-in-out infinite;}
+@keyframes ovBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.ov-title{font-family:'Chewy';font-size:clamp(24px,6vw,36px);color:var(--gold);
+  text-shadow:2px 2px 0 rgba(0,0,0,.4);}
+.ov-msg{font-size:clamp(13px,3.2vw,15px);font-weight:700;color:var(--ink-soft);max-width:320px;line-height:1.5;}
+.ov-stars{font-size:clamp(28px,7vw,40px);letter-spacing:4px;}
+.ov-star{display:inline-block;animation:starIn .5s cubic-bezier(.34,1.7,.5,1) both;}
+@keyframes starIn{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
+.ov-tries{
+  background:rgba(255,255,255,.07);border-radius:14px;padding:10px 20px;
+  font-size:clamp(12px,3vw,14px);font-weight:700;color:var(--ink-soft);
+}
+.ov-tries b{color:var(--gold);}
+
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.btn{font-family:'Chewy';font-size:clamp(17px,4.5vw,22px);color:#0f1b2d;border:0;cursor:pointer;
+  padding:13px 28px;border-radius:18px;letter-spacing:.4px;
+  transition:transform .12s,box-shadow .12s;}
+.btn:active{transform:translateY(4px);}
+.btn-gold{background:linear-gradient(150deg,var(--gold),var(--gold2));
+  box-shadow:0 7px 0 #a06800,0 12px 20px rgba(0,0,0,.3);}
+.btn-gold:active{box-shadow:0 3px 0 #a06800;}
+.btn-mint{background:linear-gradient(150deg,var(--mint),var(--mint2));
+  box-shadow:0 7px 0 #027a5c,0 12px 20px rgba(0,0,0,.3);}
+.btn-mint:active{box-shadow:0 3px 0 #027a5c;}
+.btn-coral{background:linear-gradient(150deg,var(--coral),var(--coral2));color:#fff;
+  box-shadow:0 7px 0 #8a1830,0 12px 20px rgba(0,0,0,.3);}
+.btn-coral:active{box-shadow:0 3px 0 #8a1830;}
+
+/* toast */
+#toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-14px) scale(.9);
+  opacity:0;z-index:60;font-family:'Chewy';font-size:18px;letter-spacing:.3px;
+  padding:9px 22px;border-radius:99px;color:#fff;pointer-events:none;
+  transition:.3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0) scale(1);opacity:1;}
+#toast.ok{background:var(--mint2);box-shadow:0 5px 0 #027a5c;}
+#toast.no{background:var(--coral2);box-shadow:0 5px 0 #8a1830;}
+#toast.info{background:var(--sky2);box-shadow:0 5px 0 #0f6a94;}
+
+/* level transition flash */
+.lvl-flash{position:fixed;inset:0;z-index:45;pointer-events:none;opacity:0;
+  background:radial-gradient(circle,rgba(255,209,102,.3),transparent 70%);}
+.lvl-flash.go{animation:flash .6s ease;}
+@keyframes flash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+
+/* ── WORD PUZZLE (Lv4) ── */
+.wp-clue{text-align:center;margin-bottom:10px;background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:12px 16px;}
+.wp-clue .wp-emoji{font-size:clamp(38px,10vw,52px);}
+.wp-clue .wp-hint{font-family:'Chewy';font-size:clamp(14px,3.8vw,18px);color:var(--ink);margin-top:4px;line-height:1.3;}
+.wp-clue .wp-ko{font-size:12px;color:var(--ink-soft);font-weight:700;margin-top:2px;}
+.wp-clue .wp-progress{font-size:11px;color:var(--ink-soft);font-weight:700;margin-top:4px;letter-spacing:.3px;}
+.wp-blanks{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:8px 0;}
+.wp-cell{width:clamp(32px,8.5vw,46px);height:clamp(38px,10vw,52px);border-radius:10px;
+  border:2.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Chewy';font-size:clamp(18px,5vw,26px);color:var(--ink);
+  transition:all .2s;position:relative;}
+.wp-cell.filled{background:rgba(100,160,255,.15);border-color:var(--sky);}
+.wp-cell.correct-cell{background:linear-gradient(140deg,#0d3d2a,#0a5038);border-color:var(--mint);
+  color:var(--mint);box-shadow:0 0 12px rgba(6,214,160,.3);}
+.wp-cell.wrong-cell{background:#3d1218;border-color:var(--coral);color:var(--coral);animation:cellShake .4s ease;}
+@keyframes cellShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.wp-keyboard{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px;}
+.wp-key{min-width:clamp(28px,7.5vw,40px);height:clamp(34px,9vw,46px);border-radius:10px;border:0;cursor:pointer;
+  font-family:'Chewy';font-size:clamp(15px,4vw,20px);background:rgba(255,255,255,.12);color:var(--ink);
+  transition:transform .08s,background .15s;padding:0 4px;box-shadow:0 3px 0 rgba(0,0,0,.3);}
+.wp-key:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.3);}
+.wp-key.used-correct{background:var(--mint2);color:#fff;opacity:.7;}
+.wp-key.used-wrong{background:rgba(255,255,255,.05);color:rgba(255,255,255,.25);pointer-events:none;}
+.wp-key.del{background:rgba(239,71,111,.25);color:var(--coral);min-width:clamp(40px,10vw,54px);}
+.wp-key.del:active{background:rgba(239,71,111,.45);}
+.wp-streak{display:flex;justify-content:center;gap:6px;margin-top:6px;}
+.wp-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.15);transition:.3s;}
+.wp-dot.done{background:var(--mint);}
+.wp-dot.active{background:var(--gold);animation:crumbPulse 1s ease-in-out infinite;}
+@keyframes crumbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+</style>
+</head>
+<body>
+
+<!-- stars -->
+<div id="stars"></div>
+<div class="lvl-flash" id="lvlFlash"></div>
+<div id="toast"></div>
+
+<div id="app">
+  <header>
+    <div class="logo">✨ Past Tense Quest</div>
+    <div class="hud">
+      <div class="chip">⭐ <span id="scoreEl">0</span></div>
+      <div class="chip">🔁 <span id="triesEl">0</span></div>
+    </div>
+  </header>
+
+  <div class="level-bar" id="levelBar"></div>
+  <div class="timer-wrap">
+    <div class="timer-rail"><div class="timer-bar" id="timerBar"></div></div>
+    <div class="timer-info"><span id="timerLabel">⏱</span><span id="pairsLabel"></span></div>
+  </div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+</div>
+
+<!-- overlays -->
+<div class="overlay" id="startOv">
+  <div class="ov-box">
+    <div class="ov-emoji">🧠</div>
+    <div class="ov-title">Past Tense Quest!</div>
+    <div class="ov-msg">4 levels of challenges!<br>Learn past tense verbs step by step!<br><br>
+      <b style="color:var(--gold)">Level 1</b> 현재형 ↔ 과거형 단어 (8쌍 / 16장)<br>
+      <b style="color:var(--sky)">Level 2</b> 그림 보고 과거형 고르기 (16문제 / 4×4)<br>
+      <b style="color:var(--coral)">Level 3</b> 현재형 ↔ 과거형 문장 (8쌍 / 16장)<br>
+      <b style="color:var(--mint)">Level 4</b> 격자에서 과거형 단어 찾기 (14단어)<br><br>
+      <span style="color:var(--gold)">⚠ 레벨 통과 후 다음 단계!</span><br>
+      <span style="color:var(--ink-soft);font-size:.9em">Lv.1·3: ⭐⭐ 이상 &nbsp;|&nbsp; Lv.2·4: 70% 이상</span>
+    </div>
+    <button class="btn btn-gold" id="startBtn">▶ Start Level 1!</button>
+  </div>
+</div>
+
+<div class="overlay" id="resultOv">
+  <div class="ov-box">
+    <div class="ov-emoji" id="ovEmoji">🎉</div>
+    <div class="ov-title" id="ovTitle">Level Clear!</div>
+    <div class="ov-stars" id="ovStars"></div>
+    <div class="ov-msg" id="ovMsg"></div>
+    <div class="ov-tries" id="ovTries"></div>
+    <div class="btn-row" id="ovBtns"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   DATA — 14 verb pairs
+═══════════════════════════════════ */
+const ALL_VERBS = [
+  {present:"make", past:"made",    ko:"만들다",       emoji:"🏗️"},
+  {present:"go",   past:"went",    ko:"가다",         emoji:"🚶"},
+  {present:"draw", past:"drew",    ko:"그리다",       emoji:"🎨"},
+  {present:"paint",past:"painted", ko:"칠하다/그리다", emoji:"🖌️"},
+  {present:"is",   past:"was",     ko:"~이다(단수)",   emoji:"👤"},
+  {present:"are",  past:"were",    ko:"~이다(복수)",   emoji:"👥"},
+  {present:"build",past:"built",   ko:"짓다",         emoji:"🏠"},
+  {present:"take", past:"took",    ko:"가져가다",     emoji:"📦"},
+  {present:"read", past:"read",    ko:"읽다",         emoji:"📚"},
+  {present:"run",  past:"ran",     ko:"달리다",       emoji:"🏃"},
+  {present:"play", past:"played",  ko:"놀다/하다",    emoji:"⚽"},
+  {present:"see",  past:"saw",     ko:"보다",         emoji:"👀"},
+  {present:"swim", past:"swam",    ko:"수영하다",     emoji:"🏊"},
+  {present:"eat",  past:"ate",     ko:"먹다",         emoji:"🍎"},
+];
+
+// Lv2 quiz questions — 16 total (all 14 verbs + 2 extras using different contexts)
+const L2_QUESTIONS = [
+  {emoji:"🏃", sentence:"She ___ to school this morning.", present:"run",  ko:"달리다"},
+  {emoji:"🍕", sentence:"He ___ three slices of pizza.",   present:"eat",  ko:"먹다"},
+  {emoji:"🎨", sentence:"I ___ a beautiful picture.",      present:"draw", ko:"그리다"},
+  {emoji:"🏊", sentence:"We ___ in the ocean.",            present:"swim", ko:"수영하다"},
+  {emoji:"🖌️", sentence:"She ___ the fence white.",       present:"paint",ko:"칠하다"},
+  {emoji:"⚽", sentence:"They ___ soccer after school.",   present:"play", ko:"하다"},
+  {emoji:"🏠", sentence:"Dad ___ a treehouse.",            present:"build",ko:"짓다"},
+  {emoji:"📚", sentence:"I ___ a chapter last night.",     present:"read", ko:"읽다"},
+  {emoji:"👀", sentence:"He ___ a rainbow in the sky.",    present:"see",  ko:"보다"},
+  {emoji:"📦", sentence:"She ___ an umbrella to school.",  present:"take", ko:"가져가다"},
+  {emoji:"🚶", sentence:"We ___ to the park together.",    present:"go",   ko:"가다"},
+  {emoji:"🏗️", sentence:"They ___ a sandcastle.",         present:"make", ko:"만들다"},
+  {emoji:"🍎", sentence:"The rabbit ___ all the carrots.", present:"eat",  ko:"먹다"},
+  {emoji:"📖", sentence:"Grandma ___ us a story.",         present:"read", ko:"읽다"},
+  {emoji:"🏃‍♂️",sentence:"He ___ faster than everyone.",  present:"run",  ko:"달리다"},
+  {emoji:"🎭", sentence:"The kids ___ a game outside.",    present:"play", ko:"하다"},
+];
+
+// Lv3 sentence pairs
+const L3_PAIRS = [
+  {a:"I go to school.",        b:"I went to school."},
+  {a:"She draws every day.",   b:"She drew every day."},
+  {a:"He paints the wall.",    b:"He painted the wall."},
+  {a:"They build a fort.",     b:"They built a fort."},
+  {a:"She takes a photo.",     b:"She took a photo."},
+  {a:"I read every night.",    b:"I read last night."},
+  {a:"She is happy.",          b:"She was happy."},
+  {a:"They are at school.",    b:"They were at school."},
+  {a:"We swim in the pool.",   b:"We swam in the pool."},
+  {a:"He runs every morning.", b:"He ran every morning."},
+  {a:"We make cookies.",       b:"We made cookies."},
+  {a:"I see a big bird.",      b:"I saw a big bird."},
+];
+
+// L1 always-include: build-built (+ 7 random from remaining 13 = 8 pairs total → 16 cards)
+const L1_FIXED = [{present:"build",past:"built",ko:"짓다",emoji:"🏠"}];
+
+/* level configs */
+const LEVELS = [
+  {type:"memory",     pairs:8,    time:100, cols:4, label:"Lv.1 단어 짝 맞추기",    color:"var(--gold)"},
+  {type:"quiz",       qCount:16,  time:130, cols:1, label:"Lv.2 그림 보고 과거형!", color:"var(--sky)"},
+  {type:"memory",     pairs:8,    time:130, cols:4, label:"Lv.3 문장 짝 맞추기",    color:"var(--coral)"},
+  {type:"wordpuzzle", wpCount:14, time:180,          label:"Lv.4 Word Puzzle!",      color:"var(--mint)"},
+];
+const PASS_STARS=2;
+
+/* ═══════════════════════════════════
+   STATE
+═══════════════════════════════════ */
+let level=0, tries=[], totalScore=0, levelTries=0;
+// memory state
+let cards=[], flipped=[], matched=0, canFlip=true;
+// quiz state
+let quizList=[], quizIdx=0, quizCorrect=0, quizWrong=0;
+// timer
+let timerSec=0, timerMax=0, timerInt=null;
+
+/* ═══════════════════════════════════
+   SPEECH
+═══════════════════════════════════ */
+let voice=null;
+function pickVoice(){const v=speechSynthesis.getVoices();
+  voice=v.find(x=>/^en/i.test(x.lang)&&/Google/i.test(x.name))||v.find(x=>/^en/i.test(x.lang))||null;}
+if('speechSynthesis'in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function speak(t,r=.88){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();
+  // past-tense "read" sounds like "red" — replace for TTS only
+  // match "read" when it's NOT the first word (present) and context implies past
+  // simplest reliable fix: replace standalone "read" followed by non-verb context
+  const tts=t
+    .replace(/\bread last night\b/gi,'red last night')
+    .replace(/\bread every night\b/gi,'reed every night')  // present — keep "reed"
+    .replace(/\bI read a\b/gi,'I red a')
+    .replace(/\bGrandma read\b/gi,'Grandma red')
+    .replace(/\bread us\b/gi,'red us')
+    // word-puzzle: when the answer word alone is "read" as past, speak "red"
+    // handled by context above; lone "read" as single word stays ambiguous → use "red"
+    .replace(/^read$/i,'red');
+  const u=new SpeechSynthesisUtterance(tts);u.lang='en-US';u.rate=r;u.pitch=1.05;if(voice)u.voice=voice;speechSynthesis.speak(u);}
+
+/* ═══════════════════════════════════
+   HELPERS
+═══════════════════════════════════ */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+const $=id=>document.getElementById(id);
+function showToast(m,t){const el=$('toast');el.textContent=m;el.className='toast show '+t;setTimeout(()=>el.className='toast',1400);}
+
+/* ═══════════════════════════════════
+   STARFIELD
+═══════════════════════════════════ */
+function buildStarfield(){
+  const c=$('stars');c.innerHTML='';
+  for(let i=0;i<80;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=.5+Math.random()*2;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;--delay:${-Math.random()*4}s;`;
+    c.appendChild(s);
+  }
+}
+
+/* ═══════════════════════════════════
+   LEVEL BAR
+═══════════════════════════════════ */
+function buildLevelBar(){
+  const bar=$('levelBar');bar.innerHTML='';
+  LEVELS.forEach((lv,i)=>{
+    if(i>0){const line=document.createElement('div');line.className='lv-line';bar.appendChild(line);}
+    const node=document.createElement('div');
+    node.className='lv-node'+(i<level?' done':i===level?' active':'');
+    node.innerHTML=
+      `<div class="lv-circle" style="${i===level?'border-color:'+lv.color:''}">`+
+      (i<level?'✓':String(i+1))+`</div>`+
+      `<div class="lv-label">${i===level?'<span style="color:'+lv.color+'">'+lv.label+'</span>':lv.label}</div>`;
+    bar.appendChild(node);
+  });
+}
+
+/* ═══════════════════════════════════
+   TIMER
+═══════════════════════════════════ */
+function startTimer(max){
+  clearInterval(timerInt);
+  timerSec=timerMax=max;
+  updateTimerUI();
+  timerInt=setInterval(()=>{timerSec--;updateTimerUI();if(timerSec<=0){clearInterval(timerInt);onTimerEnd();}},1000);
+}
+function stopTimer(){clearInterval(timerInt);}
+function updateTimerUI(){
+  const pct=timerSec/timerMax*100;
+  const bar=$('timerBar');bar.style.width=pct+'%';
+  bar.className='timer-bar'+(pct<30?' warn':'');
+  $('timerLabel').textContent='⏱ '+timerSec+'s';
+}
+function onTimerEnd(){
+  if(LEVELS[level].type==='wordpuzzle'){
+    const n=wsWordsToFind.filter(w=>w.found).length;
+    const passed=n>=Math.ceil(wsWordsToFind.length*.7);
+    showResult(passed,n,wsWordsToFind.length);
+  } else {
+    showResult(false);
+  }
+}
+
+/* ═══════════════════════════════════
+   BOARD ROUTER
+═══════════════════════════════════ */
+function buildBoard(){
+  const lv=LEVELS[level];
+  if(lv.type==='memory')     buildMemoryBoard(lv);
+  else if(lv.type==='quiz')  buildQuizBoard(lv);
+  else                       buildWordPuzzle(lv);
+}
+
+/* ── LEVEL 1 & 3 : MEMORY ── */
+function buildMemoryBoard(lv){
+  $('board').style.display='grid';
+  let pool;
+  if(level===0){
+    // always include build-built; fill rest randomly from the other 13
+    const rest=shuffle(ALL_VERBS.filter(v=>v.present!=='build')).slice(0,lv.pairs-1); // 7 random
+    pool=shuffle([...L1_FIXED,...rest]);
+  } else {
+    pool=shuffle(L3_PAIRS).slice(0,lv.pairs);
+  }
+
+  cards=[];flipped=[];matched=0;canFlip=true;
+
+  const cardData=[];
+  if(level===0){
+    pool.forEach((v,pi)=>{
+      cardData.push({id:pi*2,   pairId:pi, emoji:'', text:v.present, sub:v.ko,  isPast:false});
+      cardData.push({id:pi*2+1, pairId:pi, emoji:'', text:v.past,    sub:'',    isPast:true});
+    });
+  } else {
+    pool.forEach((p,pi)=>{
+      cardData.push({id:pi*2,   pairId:pi, emoji:'', text:p.a, sub:'현재형'});
+      cardData.push({id:pi*2+1, pairId:pi, emoji:'', text:p.b, sub:'과거형'});
+    });
+  }
+
+  const shuffled=shuffle(cardData);
+  const board=$('board');board.innerHTML='';
+  board.style.gridTemplateColumns=`repeat(${lv.cols},1fr)`;
+
+  shuffled.forEach(cd=>{
+    const card=document.createElement('div');card.className='card';
+    card.innerHTML=`<div class="card-inner">
+      <div class="card-back"></div>
+      <div class="card-front">
+        ${cd.emoji?`<div class="c-emoji">${cd.emoji}</div>`:''}
+        ${cd.text?`<div class="c-text">${cd.text}</div>`:''}
+        ${cd.sub?`<div class="c-sub">${cd.sub}</div>`:''}
+      </div></div>`;
+    card.addEventListener('click',()=>onMemoryClick(card,cd));
+    board.appendChild(card);
+    cards.push({el:card,data:cd,isFlipped:false,isMatched:false});
+  });
+
+  $('pairsLabel').textContent=`0 / ${lv.pairs} 짝`;
+}
+
+function onMemoryClick(el,cd){
+  if(!canFlip)return;
+  const c=cards.find(x=>x.el===el);
+  if(!c||c.isFlipped||c.isMatched)return;
+  c.isFlipped=true;el.classList.add('flipped');
+  let spk=cd.text;
+  if(spk&&!/현재형|과거형/.test(spk)){
+    // past-tense "read" → pronounce as "red"
+    if(cd.isPast && spk.toLowerCase()==='read') spk='red';
+    speak(spk);
+  }
+  flipped.push(c);
+  if(flipped.length===2) checkMemoryMatch();
+}
+
+function checkMemoryMatch(){
+  canFlip=false;
+  const [a,b]=flipped;
+  if(a.data.pairId===b.data.pairId){
+    setTimeout(()=>{
+      a.isMatched=b.isMatched=true;
+      a.el.classList.add('matched');b.el.classList.add('matched');
+      matched++;
+      $('pairsLabel').textContent=`${matched} / ${LEVELS[level].pairs} 짝`;
+      showToast('✨ Perfect match!','ok');
+      flipped=[];canFlip=true;
+      if(matched===LEVELS[level].pairs){stopTimer();showResult(true);}
+    },400);
+  } else {
+    setTimeout(()=>{
+      a.el.classList.add('wrong-flash');b.el.classList.add('wrong-flash');
+      setTimeout(()=>{
+        a.isFlipped=b.isFlipped=false;
+        a.el.classList.remove('flipped','wrong-flash');
+        b.el.classList.remove('flipped','wrong-flash');
+        flipped=[];canFlip=true;
+      },500);
+    },600);
+  }
+}
+
+/* ── LEVEL 2 : PICTURE QUIZ ── */
+function buildQuizBoard(lv){
+  $('board').style.display='block';
+  $('board').innerHTML='';
+  quizList=shuffle(L2_QUESTIONS).slice(0,lv.qCount);
+  quizIdx=0;quizCorrect=0;quizWrong=0;
+  $('pairsLabel').textContent=`0 / ${lv.qCount} 문제`;
+  renderQuizCard();
+}
+
+function renderQuizCard(){
+  const lv=LEVELS[level];
+  const q=quizList[quizIdx];
+  const correct=ALL_VERBS.find(v=>v.present===q.present).past;
+  const distractors=shuffle(ALL_VERBS.filter(v=>v.past!==correct)).slice(0,3).map(v=>v.past);
+  const opts=shuffle([correct,...distractors]);
+
+  const board=$('board');board.innerHTML='';
+  board.style.display='flex';
+  board.style.flexDirection='column';
+  board.style.gap='10px';
+  board.style.height='100%';
+
+  /* ── 4×4 progress dot grid ── */
+  const dotGrid=document.createElement('div');
+  dotGrid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:5px;';
+  for(let i=0;i<lv.qCount;i++){
+    const d=document.createElement('div');
+    const isDone=i<quizIdx, isCur=i===quizIdx;
+    d.style.cssText=`height:8px;border-radius:99px;transition:.3s;
+      background:${isDone?'var(--mint)':isCur?'var(--gold)':'rgba(255,255,255,.12)'};
+      ${isCur?'box-shadow:0 0 8px var(--gold);':''}`;
+    dotGrid.appendChild(d);
+  }
+  board.appendChild(dotGrid);
+
+  /* ── clue card ── */
+  const clue=document.createElement('div');
+  clue.style.cssText=`text-align:center;background:rgba(255,255,255,.06);
+    border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:12px 14px;flex:0 0 auto;`;
+  clue.innerHTML=`
+    <div style="font-size:clamp(40px,10vw,56px);line-height:1.1;">${q.emoji}</div>
+    <div style="font-family:'Chewy';font-size:clamp(14px,3.6vw,19px);color:var(--ink);margin-top:6px;line-height:1.3;">
+      ${q.sentence.replace('___','<span style="color:var(--gold);letter-spacing:3px;font-size:1.1em;">___</span>')}
+    </div>
+    <div style="margin-top:4px;font-size:12px;color:var(--ink-soft);font-weight:700;">
+      (${q.ko}의 과거형은?) &nbsp;·&nbsp; 문제 ${quizIdx+1}/${lv.qCount} &nbsp;·&nbsp; ✅${quizCorrect} ❌${quizWrong}
+    </div>`;
+  board.appendChild(clue);
+
+  /* ── 2×2 option buttons — flex:1 to fill remaining space ── */
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;flex:1;min-height:0;';
+  opts.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.style.cssText=`background:rgba(255,255,255,.08);border:2.5px solid rgba(255,255,255,.18);
+      border-radius:18px;font-family:'Chewy';font-size:clamp(22px,5.5vw,30px);
+      color:var(--ink);cursor:pointer;letter-spacing:.5px;
+      box-shadow:0 5px 0 rgba(0,0,0,.3);transition:transform .1s,background .15s;
+      display:flex;align-items:center;justify-content:center;width:100%;height:100%;`;
+    btn.textContent=opt;
+    btn.addEventListener('touchstart',()=>{btn.style.transform='scale(.94)';},{passive:true});
+    btn.addEventListener('touchend',()=>{btn.style.transform='';},{passive:true});
+    btn.onclick=()=>onQuizAnswer(btn,opt,correct,opts,grid);
+    grid.appendChild(btn);
+  });
+  board.appendChild(grid);
+
+  speak(q.sentence.replace('___', correct));
+}
+
+function onQuizAnswer(btn,chosen,correct,opts,grid){
+  // disable all
+  grid.querySelectorAll('button').forEach(b=>b.onclick=null);
+  if(chosen===correct){
+    btn.style.background='linear-gradient(140deg,#0d3d2a,#0a5038)';
+    btn.style.borderColor='var(--mint)';btn.style.color='var(--mint)';
+    btn.style.boxShadow='0 0 14px rgba(6,214,160,.4)';
+    quizCorrect++;
+    showToast('✨ Correct! '+ correct,'ok');
+    speak(correct);
+  } else {
+    btn.style.background='#3d1218';btn.style.borderColor='var(--coral)';btn.style.color='var(--coral)';
+    // highlight correct
+    grid.querySelectorAll('button').forEach(b=>{
+      if(b.textContent===correct){
+        b.style.background='linear-gradient(140deg,#0d3d2a,#0a5038)';
+        b.style.borderColor='var(--mint)';b.style.color='var(--mint)';
+      }
+    });
+    quizWrong++;
+    showToast('❌ It was: '+correct,'no');
+  }
+  $('pairsLabel').textContent=`${quizCorrect} / ${LEVELS[level].qCount} 정답`;
+
+  setTimeout(()=>{
+    quizIdx++;
+    if(quizIdx>=quizList.length){
+      stopTimer();
+      // pass if ≥70% correct
+      const passed=quizCorrect>=Math.ceil(quizList.length*.7);
+      showResult(passed, quizCorrect, quizList.length);
+    } else {
+      renderQuizCard();
+    }
+  },1100);
+}
+
+/* ═══════════════════════════════════
+   LEVEL 4 — WORD SEARCH (Canvas)
+   14×14 grid — guaranteed all 14
+   past-tense words placed.
+   Tap first letter, then last letter.
+═══════════════════════════════════ */
+const WS_WORDS = ALL_VERBS.map(v=>({
+  word: v.past.toUpperCase(),
+  present: v.present,
+  ko: v.ko,
+  emoji: v.emoji
+}));
+const WS_SIZE = 14;
+let wsData=null;
+let wsWordsToFind=[];
+let wsSelStart=null;
+let wsCanvas=null, wsCtx=null, wsCellPx=0;
+let wsSelCells=[];
+
+/* ─── grid generator — retries until ALL words fit ─── */
+function buildWSGrid(words){
+  const DIRS=[[0,1],[1,0],[0,-1],[-1,0]]; // 가로·세로만 — 대각선 없음 (초등학생용)
+  let bestResult=null, bestCount=0;
+
+  for(let attempt=0;attempt<30;attempt++){
+    const grid=Array.from({length:WS_SIZE},()=>Array(WS_SIZE).fill(''));
+    const placed=[];
+    const sorted=[...words].sort((a,b)=>b.length-a.length);
+    for(const word of sorted){
+      let ok=false;
+      // try every direction × many positions
+      const shuffledDirs=[...DIRS].sort(()=>Math.random()-.5);
+      outer:
+      for(const [dr,dc] of shuffledDirs){
+        for(let tries=0;tries<80;tries++){
+          const r=Math.floor(Math.random()*WS_SIZE);
+          const c=Math.floor(Math.random()*WS_SIZE);
+          if(canPlaceWS(grid,word,r,c,dr,dc)){
+            placeWordWS(grid,word,r,c,dr,dc);
+            const cells=[];
+            for(let i=0;i<word.length;i++) cells.push({r:r+dr*i,c:c+dc*i});
+            placed.push({word,cells});ok=true;break outer;
+          }
+        }
+      }
+    }
+    if(placed.length>bestCount){bestCount=placed.length;bestResult={grid:grid.map(r=>[...r]),placed:[...placed]};}
+    if(placed.length===words.length) break; // all placed — done
+  }
+
+  // fill blanks
+  const ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for(let r=0;r<WS_SIZE;r++) for(let c=0;c<WS_SIZE;c++)
+    if(!bestResult.grid[r][c]) bestResult.grid[r][c]=ALPHA[Math.floor(Math.random()*26)];
+  return bestResult;
+}
+function canPlaceWS(g,word,r,c,dr,dc){
+  for(let i=0;i<word.length;i++){
+    const nr=r+dr*i,nc=c+dc*i;
+    if(nr<0||nr>=WS_SIZE||nc<0||nc>=WS_SIZE) return false;
+    if(g[nr][nc]&&g[nr][nc]!==word[i]) return false;
+  }return true;
+}
+function placeWordWS(g,word,r,c,dr,dc){
+  for(let i=0;i<word.length;i++) g[r+dr*i][c+dc*i]=word[i];
+}
+
+/* ─── build level ─── */
+function buildWordPuzzle(lv){
+  $('board').style.display='block';
+  $('board').innerHTML='';
+  const allWords=WS_WORDS.map(w=>({...w,found:false,cells:[]}));
+  wsData=buildWSGrid(allWords.map(w=>w.word));
+
+  // only keep words that were actually placed
+  wsWordsToFind=[];
+  wsData.placed.forEach(p=>{
+    const wf=allWords.find(w=>w.word===p.word&&!w.cells.length);
+    if(wf){wf.cells=p.cells;wsWordsToFind.push(wf);}
+  });
+
+  wsSelStart=null;wsSelCells=[];
+  $('pairsLabel').textContent=`0 / ${wsWordsToFind.length} 발견`;
+  renderWSBoard();
+}
+
+/* ─── render ─── */
+function renderWSBoard(){
+  const board=$('board');
+  board.innerHTML='';
+  board.style.cssText='display:flex;flex-direction:column;gap:8px;height:100%;';
+
+  /* clue pills */
+  const clueWrap=document.createElement('div');
+  clueWrap.id='wsClues';
+  clueWrap.style.cssText='display:flex;flex-wrap:wrap;gap:5px;flex:0 0 auto;max-height:90px;overflow-y:auto;';
+  wsWordsToFind.forEach((w,i)=>{
+    const pill=document.createElement('div');
+    pill.id='wsp'+i;
+    pill.style.cssText=`display:inline-flex;align-items:center;gap:3px;
+      padding:3px 9px;border-radius:99px;font-family:'Chewy';font-size:clamp(11px,2.8vw,14px);
+      transition:.3s;border:1.5px solid rgba(255,255,255,.15);
+      background:rgba(255,255,255,.08);color:var(--ink-soft);`;
+    pill.innerHTML=`${w.emoji} ${w.present} → <b style="color:var(--gold);margin-left:2px">${w.word}</b>`;
+    clueWrap.appendChild(pill);
+  });
+  board.appendChild(clueWrap);
+
+  /* instruction */
+  const ins=document.createElement('div');
+  ins.style.cssText='text-align:center;font-size:12px;font-weight:800;color:var(--ink-soft);flex:0 0 auto;';
+  ins.textContent='① 첫 글자 탭 → ② 마지막 글자 탭';
+  board.appendChild(ins);
+
+  /* canvas */
+  const canvasWrap=document.createElement('div');
+  canvasWrap.style.cssText='flex:1;min-height:0;display:flex;align-items:center;justify-content:center;';
+  wsCanvas=document.createElement('canvas');
+  wsCanvas.style.cssText='border-radius:12px;touch-action:manipulation;display:block;cursor:pointer;';
+  canvasWrap.appendChild(wsCanvas);
+  board.appendChild(canvasWrap);
+
+  // size canvas
+  requestAnimationFrame(()=>{
+    const sz=Math.min(canvasWrap.offsetWidth, canvasWrap.offsetHeight, 480);
+    wsCanvas.width=wsCanvas.height=sz*devicePixelRatio;
+    wsCanvas.style.width=wsCanvas.style.height=sz+'px';
+    wsCellPx=sz/WS_SIZE;
+    wsCtx=wsCanvas.getContext('2d');
+    wsCtx.scale(devicePixelRatio,devicePixelRatio);
+    drawWSCanvas();
+  });
+
+  // events — use click for tap-first/tap-second
+  wsCanvas.addEventListener('click', wsOnClick);
+  wsCanvas.addEventListener('touchend', e=>{
+    e.preventDefault();
+    const t=e.changedTouches[0];
+    const rect=wsCanvas.getBoundingClientRect();
+    const x=t.clientX-rect.left, y=t.clientY-rect.top;
+    wsTapAt(x,y);
+  },{passive:false});
+}
+
+function getCellFromXY(x,y){
+  const r=Math.floor(y/wsCellPx), c=Math.floor(x/wsCellPx);
+  if(r<0||r>=WS_SIZE||c<0||c>=WS_SIZE) return null;
+  return {r,c};
+}
+function wsOnClick(e){
+  const rect=wsCanvas.getBoundingClientRect();
+  wsTapAt(e.clientX-rect.left, e.clientY-rect.top);
+}
+function wsTapAt(x,y){
+  const cell=getCellFromXY(x,y);
+  if(!cell)return;
+  if(!wsSelStart){
+    // first tap — set start
+    wsSelStart=cell;
+    wsSelCells=[cell];
+  } else {
+    // second tap — check word
+    wsCheckWord(wsSelStart,cell);
+    wsSelStart=null;wsSelCells=[];
+  }
+  drawWSCanvas();
+}
+
+/* ─── get cells between two points ─── */
+function getCellsBetween(a,b){
+  const dr=b.r-a.r, dc=b.c-a.c;
+  const steps=Math.max(Math.abs(dr),Math.abs(dc));
+  if(steps===0) return [a];
+  // must be straight or diagonal
+  if(Math.abs(dr)!==0&&Math.abs(dc)!==0&&Math.abs(dr)!==Math.abs(dc)) return null;
+  const sr=dr===0?0:dr/Math.abs(dr), sc=dc===0?0:dc/Math.abs(dc);
+  const cells=[];
+  for(let i=0;i<=steps;i++) cells.push({r:a.r+sr*i,c:a.c+sc*i});
+  return cells;
+}
+
+/* ─── check selection ─── */
+function wsCheckWord(a,b){
+  const cells=getCellsBetween(a,b);
+  if(!cells||cells.length<2) return;
+  const word=cells.map(({r,c})=>wsData.grid[r][c]).join('');
+  const wordRev=word.split('').reverse().join('');
+
+  let matched=wsWordsToFind.find(w=>!w.found&&(w.word===word||w.word===wordRev));
+  if(matched){
+    matched.found=true;
+    // colour cells
+    const usedCells=matched.word===wordRev?[...cells].reverse():cells;
+    usedCells.forEach(({r,c})=>{wsData.grid[r][c+'_found']=true;});
+    // store for redraw
+    matched.foundCells=usedCells;
+
+    // update pill
+    const idx=wsWordsToFind.indexOf(matched);
+    const pill=$('wsp'+idx);
+    if(pill){
+      pill.style.background='var(--mint2)';pill.style.color='#fff';
+      pill.style.borderColor='var(--mint)';
+      pill.querySelector('b').style.color='#fff';
+      pill.style.textDecoration='line-through';
+    }
+    const n=wsWordsToFind.filter(w=>w.found).length;
+    $('pairsLabel').textContent=`${n} / ${wsWordsToFind.length} 발견`;
+    speak(matched.word==='READ'?'red':matched.word.toLowerCase());
+    showToast(`✨ ${matched.present} → ${matched.word}!`,'ok');
+    drawWSCanvas();
+    if(n===wsWordsToFind.length){ stopTimer(); showResult(true,n,wsWordsToFind.length); }
+  } else {
+    // wrong flash — show red highlight briefly
+    wsSelCells=cells;
+    drawWSCanvas(true);
+    setTimeout(()=>{wsSelCells=[];drawWSCanvas();},500);
+  }
+}
+
+/* ─── draw canvas ─── */
+function drawWSCanvas(wrongFlash=false){
+  if(!wsCtx) return;
+  const sz=wsCellPx;
+  wsCtx.clearRect(0,0,WS_SIZE*sz,WS_SIZE*sz);
+
+  for(let r=0;r<WS_SIZE;r++){
+    for(let c=0;c<WS_SIZE;c++){
+      const x=c*sz, y=r*sz;
+      const isStart=wsSelStart&&wsSelStart.r===r&&wsSelStart.c===c;
+      const isSelWrong=wrongFlash&&wsSelCells.some(s=>s.r===r&&s.c===c);
+
+      // find if this cell belongs to a found word
+      let foundColor=null;
+      const FOUND_COLORS=['#06d6a0','#4cc9f0','#ffd166','#ef476f','#a8dadc','#f4a261','#84a98c','#c77dff','#ff9f1c','#2ec4b6','#e76f51','#06d6a0','#4cc9f0','#ffd166'];
+      wsWordsToFind.forEach((w,wi)=>{
+        if(w.found&&w.foundCells&&w.foundCells.some(fc=>fc.r===r&&fc.c===c))
+          foundColor=FOUND_COLORS[wi%FOUND_COLORS.length];
+      });
+
+      // bg
+      wsCtx.beginPath();
+      roundRectWS(wsCtx,x+1,y+1,sz-2,sz-2,6);
+      if(foundColor){
+        wsCtx.fillStyle=foundColor+'cc';
+      } else if(isStart){
+        wsCtx.fillStyle='rgba(255,209,102,.5)';
+      } else if(isSelWrong){
+        wsCtx.fillStyle='rgba(239,71,111,.4)';
+      } else {
+        wsCtx.fillStyle='rgba(255,255,255,.07)';
+      }
+      wsCtx.fill();
+
+      // ring on start cell
+      if(isStart){
+        wsCtx.strokeStyle='var(--gold)';
+        wsCtx.lineWidth=2.5;
+        wsCtx.beginPath();
+        roundRectWS(wsCtx,x+2,y+2,sz-4,sz-4,5);
+        wsCtx.stroke();
+      }
+
+      // letter
+      wsCtx.font=`bold ${Math.round(sz*.54)}px Chewy, cursive`;
+      wsCtx.textAlign='center';wsCtx.textBaseline='middle';
+      wsCtx.fillStyle=foundColor?'#fff':isStart?'#ffdb57':'rgba(232,240,254,.9)';
+      wsCtx.fillText(wsData.grid[r][c], x+sz/2, y+sz/2+1);
+    }
+  }
+}
+function roundRectWS(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+function calcStars(timeLeft,timeMax){
+  const r=timeLeft/timeMax;
+  return r>.6?3:r>.3?2:1;
+}
+
+function showResult(success, qCorrect, qTotal){
+  stopTimer();
+  levelTries++;
+  $('triesEl').textContent=tries.reduce((a,b)=>a+b,0)+levelTries;
+
+  const lv=LEVELS[level];
+  const ov=$('resultOv');
+
+  let stars, passed;
+  if(lv.type==='quiz'||lv.type==='wordpuzzle'){
+    const correctCount=(qCorrect!=null?qCorrect:(lv.type==='wordpuzzle'?wsWordsToFind.filter(w=>w.found).length:quizCorrect));
+    const total=(qTotal!=null?qTotal:(lv.type==='wordpuzzle'?wsWordsToFind.length:quizList.length));
+    const acc=correctCount/total;
+    stars=success?(acc>=.9?3:acc>=.7?2:1):0;
+    passed=success;
+  } else {
+    stars=success?calcStars(timerSec,timerMax):0;
+    passed=success&&stars>=PASS_STARS;
+  }
+
+  $('ovEmoji').textContent=success?(stars===3?'🏆':stars===2?'🎉':'😊'):'😢';
+  $('ovTitle').textContent=success?(passed?'Level Clear! 🎊':'Almost...'):'Failed!';
+
+  const sr=$('ovStars');sr.innerHTML='';
+  for(let i=0;i<3;i++){
+    const s=document.createElement('span');s.className='ov-star';
+    s.style.animationDelay=(i*.18)+'s';s.textContent=i<stars?'⭐':'☆';sr.appendChild(s);
+  }
+
+  let msg='';
+  if(!success){
+    if(lv.type==='quiz') msg=`정답 ${quizCorrect}/${quizList.length}개. 70% 이상 맞혀야 통과!<br><span style="color:var(--gold)">다시 도전해 보세요!</span>`;
+    else if(lv.type==='wordpuzzle') msg=`${wsWordsToFind.filter(w=>w.found).length}/${wsWordsToFind.length}개 발견. 70% 이상 찾아야 통과!<br><span style="color:var(--gold)">다시 도전해 보세요!</span>`;
+    else msg=`⏱ 시간이 다 됐어요!<br><span style="color:var(--gold)">이 레벨을 통과해야 다음으로!</span>`;
+  } else if(!passed){
+    if(lv.type==='memory') msg=`별 ${stars}개! ⭐⭐ 이상이 필요해요.<br><span style="color:var(--gold)">더 빠르게 맞혀보세요!</span>`;
+    else msg=`잘 했어요! 하지만 70% 이상이 필요해요.`;
+  } else if(level===LEVELS.length-1){
+    msg=`🏆 모든 레벨 완료! 과거형 마스터!<br>총 도전 횟수: <b style="color:var(--gold)">${tries.reduce((a,b)=>a+b,0)+levelTries}번</b>`;
+  } else {
+    if(lv.type==='quiz') msg=`정답 ${quizCorrect}/${quizList.length}개! 다음 레벨로 고고!`;
+    else if(lv.type==='wordpuzzle') msg=`${wsWordsToFind.filter(w=>w.found).length}/${wsWordsToFind.length}개 발견! 훌륭한 탐정!`;
+    else msg=`완벽해요! 남은 시간: <b style="color:var(--mint)">${timerSec}초</b>`;
+  }
+  $('ovMsg').innerHTML=msg;
+
+  const totalTries=tries.reduce((a,b)=>a+b,0)+levelTries;
+  $('ovTries').innerHTML=`이번 레벨 <b>${levelTries}번</b> 도전 · 전체 <b>${totalTries}번</b> 도전`;
+
+  const btns=$('ovBtns');btns.innerHTML='';
+  if(!success||!passed){
+    const rb=document.createElement('button');rb.className='btn btn-gold';rb.textContent='🔁 다시 도전!';
+    rb.onclick=()=>{ov.classList.remove('show');retryLevel();};btns.appendChild(rb);
+  } else if(level<LEVELS.length-1){
+    const nb=document.createElement('button');nb.className='btn btn-mint';nb.textContent='➡ Level '+(level+2)+'!';
+    nb.onclick=()=>{ov.classList.remove('show');nextLevel();};btns.appendChild(nb);
+  } else {
+    const ab=document.createElement('button');ab.className='btn btn-gold';ab.textContent='🎮 다시 처음부터!';
+    ab.onclick=()=>{ov.classList.remove('show');resetAll();};btns.appendChild(ab);
+  }
+
+  setTimeout(()=>ov.classList.add('show'),300);
+}
+
+/* ═══════════════════════════════════
+   FLOW
+═══════════════════════════════════ */
+function retryLevel(){
+  buildBoard();
+  startTimer(LEVELS[level].time);
+  $('lvlFlash').classList.remove('go');void $('lvlFlash').offsetWidth;$('lvlFlash').classList.add('go');
+  showToast('🔁 다시 도전!','info');
+}
+function nextLevel(){
+  tries.push(levelTries);levelTries=0;level++;
+  buildLevelBar();buildBoard();startTimer(LEVELS[level].time);
+  $('lvlFlash').classList.remove('go');void $('lvlFlash').offsetWidth;$('lvlFlash').classList.add('go');
+  showToast('🚀 Level '+(level+1)+' 시작!','info');
+}
+function resetAll(){
+  level=0;tries=[];totalScore=0;levelTries=0;
+  $('scoreEl').textContent=0;$('triesEl').textContent=0;
+  buildLevelBar();buildBoard();startTimer(LEVELS[level].time);
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+buildStarfield();
+buildLevelBar();
+$('startBtn').onclick=()=>{
+  $('startOv').classList.remove('show');
+  try{speak(' ');}catch(e){}
+  buildBoard();startTimer(LEVELS[level].time);
+};
+$('startOv').classList.add('show');
+</script>
+</body>
+</html>
